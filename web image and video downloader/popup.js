@@ -37,6 +37,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnSelectAll) btnSelectAll.onclick = toggleSelectAll;
     if (btnDownload) btnDownload.onclick = downloadSelected;
 
+    // Header buttons
+    const btnReset = document.getElementById('btn-reset');
+    const btnClose = document.getElementById('btn-close');
+
+    if (btnReset) {
+        btnReset.onclick = () => {
+            selectedIndices.clear();
+            isSelectAll = false;
+            render();
+            updateStats();
+        };
+    }
+
+    if (btnClose) {
+        btnClose.onclick = () => {
+            window.close();
+        };
+    }
+
     // Tab switching
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
@@ -326,8 +345,25 @@ document.addEventListener('DOMContentLoaded', () => {
             dimBadge.className = "badge";
             dimBadge.textContent = `${item.width}x${item.height}`;
 
+            // File size badge
+            const sizeBadge = document.createElement("span");
+            sizeBadge.className = "badge badge-size";
+            sizeBadge.textContent = "...";
+
             badgesDiv.appendChild(extBadge);
             badgesDiv.appendChild(dimBadge);
+            badgesDiv.appendChild(sizeBadge);
+
+            // Fetch file size asynchronously
+            fetchFileSize(item.src).then(size => {
+                if (size) {
+                    sizeBadge.textContent = formatFileSize(size);
+                } else {
+                    sizeBadge.style.display = 'none';
+                }
+            }).catch(() => {
+                sizeBadge.style.display = 'none';
+            });
 
             // Create card info
             const cardInfo = document.createElement("div");
@@ -541,6 +577,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const parts = clean.split('.');
         if (parts.length > 1) return parts.pop().toLowerCase();
         return "";
+    }
+
+    async function fetchFileSize(url) {
+        try {
+            const response = await fetch(url, { method: 'HEAD' });
+            const contentLength = response.headers.get('Content-Length');
+            return contentLength ? parseInt(contentLength) : null;
+        } catch (e) {
+            // If HEAD fails, try GET with range
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Range': 'bytes=0-0' }
+                });
+                const contentRange = response.headers.get('Content-Range');
+                if (contentRange) {
+                    const match = contentRange.match(/\/(\d+)/);
+                    return match ? parseInt(match[1]) : null;
+                }
+                return null;
+            } catch (e2) {
+                return null;
+            }
+        }
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) {
+            return (bytes / 1024).toFixed(1) + ' KB';
+        }
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
     function sendMessage(tabId, msg) {
