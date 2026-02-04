@@ -6,6 +6,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const previewBtn = document.getElementById('preview-btn');
     const urlPreview = document.getElementById('url-preview');
 
+    const refreshBtn = document.getElementById('refresh-btn');
+    const closeBtn = document.getElementById('close-btn');
+
+    refreshBtn.addEventListener('click', () => {
+        window.location.reload();
+    });
+
+    closeBtn.addEventListener('click', () => {
+        window.close();
+    });
+
     async function getFileSize(url) {
         try {
             const response = await fetch(url, { method: 'HEAD' });
