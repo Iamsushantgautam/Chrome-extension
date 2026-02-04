@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+
+    <!-- Top Header -->
+    <div class="header">
+        <div class="brand">
+            <svg class="brand-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                    d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5-7l-3 3.72L9 13l-3 4h12l-4-5z" />
+            </svg>
+            <span class="brand-name">Image Download</span>
+        </div>
+        <div class="header-actions">
+            <!-- Settings or other actions could go here -->
+        </div>
+    </div>
+
+    <!-- Stats & Selection Bar -->
+    <div class="sub-header">
+        <div class="stats-row">
+            <div class="found-count">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38" />
+                </svg>
+                Found <span id="total-count">0</span> items
+            </div>
+            <button id="btn-select-all" class="btn-outline">Select all</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="images">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5-7l-3 3.72L9 13l-3 4h12l-4-5z" />
+                </svg>
+                Images (<span id="image-count">0</span>)
+            </button>
+            <button class="tab" data-tab="videos">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
+                </svg>
+                Videos (<span id="video-count">0</span>)
+            </button>
+        </div>
+
+        <div class="filter-row">
+            <div class="filter-group">
+                <label>Size</label>
+                <select id="filter-size">
+                    <option value="all">All</option>
+                    <option value="large">Large (>1000px)</option>
+                    <option value="medium">Medium (>500px)</option>
+                    <option value="small">Small (<500px)< /option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Type</label>
+                <select id="filter-type">
+                    <option value="all">All</option>
+                    <option value="jpg">JPG</option>
+                    <option value="png">PNG</option>
+                    <option value="webp">WEBP</option>
+                    <option value="svg">SVG</option>
+                    <option value="gif">GIF</option>
+                    <option value="video">Video</option>
+                </select>
+            </div>
+
+            <div class="filter-group" style="flex:1">
+                <input type="text" id="filter-url" placeholder="Filter by URL..." class="search-input">
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div id="media-container" class="media-container">
+        <!-- Rendered items -->
+    </div>
+
+    <!-- Bottom Action Bar -->
+    <div class="bottom-bar">
+        <button id="download-selected" class="btn-primary" disabled>
+            Download <span id="selected-count">0</span> files
+        </button>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox hidden">
+        <div class="lightbox-header">
+            <span id="lb-counter"></span>
+            <button class="lb-close">&times;</button>
+        </div>
+        <div class="lightbox-content">
+            <button class="lb-nav lb-prev">&lt;</button>
+            <div id="lb-media-wrapper">
+                <!-- Media injected here -->
+            </div>
+            <button class="lb-nav lb-next">&gt;</button>
+        </div>
+        <div class="lightbox-footer">
+            <a id="lb-download" class="btn-primary" href="#" target="_blank" download>Download</a>
+        </div>
+    </div>
+
+    <script src="jszip.min.js"></script>
+    <script src="popup.js"></script>
+</body>
+
+</html>
