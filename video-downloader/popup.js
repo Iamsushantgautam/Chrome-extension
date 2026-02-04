@@ -56,14 +56,61 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const metaData = await metaResponse.json();
 
                     if (metaData.qualities) {
+                        const foundVideos = [];
                         const q = metaData.qualities;
                         const order = ['2160', '1440', '1080', '720', '480', '380', '240', 'auto'];
+
                         for (const label of order) {
                             if (q[label] && q[label].length > 0) {
-                                url = q[label][0].url;
-                                detectedQuality = label === 'auto' ? 'High' : label + 'p';
-                                break;
+                                const qUrl = q[label][0].url;
+                                const qLabel = label === 'auto' ? 'High' : label + 'p';
+                                foundVideos.push({ url: qUrl, quality: qLabel });
                             }
+                        }
+
+                        if (foundVideos.length > 0) {
+                            // Clear and render all found qualities
+                            statusContainer.classList.add('hidden');
+                            statusContainer.style.display = 'none';
+
+                            // If we found multiple, it's better to use the render function logic
+                            for (const v of foundVideos) {
+                                const fileSize = await getFileSize(v.url);
+                                const item = document.createElement('div');
+                                item.className = 'video-item manual-added';
+                                const fileName = `dailymotion_${v.quality}_${Date.now()}.mp4`;
+
+                                item.innerHTML = `
+                                    <div class="video-thumb">
+                                        <video src="${v.url}" muted></video>
+                                    </div>
+                                    <div class="video-info">
+                                        <div class="video-name">Dailymotion Video (${v.quality})</div>
+                                        <div class="video-meta">Quality: ${v.quality} | Size: ${fileSize}</div>
+                                    </div>
+                                    <button class="download-btn">Download</button>
+                                `;
+
+                                if (videoList.firstChild) {
+                                    videoList.insertBefore(item, videoList.firstChild);
+                                } else {
+                                    videoList.appendChild(item);
+                                }
+
+                                item.querySelector('.download-btn').addEventListener('click', () => {
+                                    chrome.downloads.download({
+                                        url: v.url,
+                                        filename: fileName,
+                                        saveAs: true
+                                    });
+                                });
+                            }
+
+                            // Clear input and return early since we handled rendering
+                            videoUrlInput.value = '';
+                            previewBtn.innerText = "Preview";
+                            previewBtn.disabled = false;
+                            return;
                         }
                     }
                 }
@@ -226,11 +273,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Infer quality from URL
             let quality = 'Standard';
-            if (data.url.includes('1080')) quality = '1080p HD';
-            else if (data.url.includes('720')) quality = '720p HD';
-            else if (data.url.includes('480')) quality = '480p';
-            else if (data.url.includes('360')) quality = '360p';
-            else if (data.url.includes('v720P')) quality = '720p HD';
+            const url = data.url.toLowerCase();
+
+            if (url.includes('2160') || url.includes('4k')) quality = '4K Ultra HD';
+            else if (url.includes('1440') || url.includes('2k')) quality = '2K QHD';
+            else if (url.includes('1080')) quality = '1080p HD';
+            else if (url.includes('720') || url.includes('v720p')) quality = '720p HD';
+            else if (url.includes('480')) quality = '480p';
+            else if (url.includes('360')) quality = '360p';
+            else if (url.includes('240')) quality = '240p';
             else if (isStream) quality = 'Adaptive';
 
             item.innerHTML = `

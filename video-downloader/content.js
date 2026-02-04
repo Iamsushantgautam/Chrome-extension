@@ -41,17 +41,49 @@ function findVideos() {
 
         // Specifically look for Dailymotion metadata patterns
         if (window.location.hostname.includes('dailymotion.com')) {
-            const dmRegex = /"qualities":\s*({[^}]+})/g;
-            const dmMatch = dmRegex.exec(content);
-            if (dmMatch) {
+            // Find all qualitites in script tags - more robust regex
+            const dmRegex = /"qualities":\s*({.+?})\s*,"/g;
+            let dmMatch;
+            while ((dmMatch = dmRegex.exec(content)) !== null) {
                 try {
-                    const qualities = JSON.parse(dmMatch[1]);
+                    // Try to extract the JSON object more carefully
+                    let jsonStr = dmMatch[1];
+                    // Basic check to ensure balanced braces
+                    let openBraces = 0;
+                    let closingIndex = -1;
+                    for (let i = 0; i < jsonStr.length; i++) {
+                        if (jsonStr[i] === '{') openBraces++;
+                        if (jsonStr[i] === '}') {
+                            openBraces--;
+                            if (openBraces === 0) {
+                                closingIndex = i;
+                                break;
+                            }
+                        }
+                    }
+                    if (closingIndex !== -1) {
+                        jsonStr = jsonStr.substring(0, closingIndex + 1);
+                    }
+
+                    const qualities = JSON.parse(jsonStr);
                     Object.values(qualities).forEach(q => {
-                        if (Array.isArray(q) && q.length > 0 && q[0].url) {
-                            videoUrls.push(q[0].url);
+                        if (Array.isArray(q)) {
+                            q.forEach(source => {
+                                if (source.url && (source.url.startsWith('http') || source.url.startsWith('//'))) {
+                                    const fullUrl = source.url.startsWith('//') ? 'https:' + source.url : source.url;
+                                    videoUrls.push(fullUrl);
+                                }
+                            });
                         }
                     });
                 } catch (e) { }
+            }
+
+            // Broad search for Dailymotion CDN URLs specifically
+            const dmCdnRegex = /https?:\/\/[^"'\s]*?dmcdn\.net\/[^"'\s]*?\.(mp4|m3u8)(?:\?[^"'\s]*)?/g;
+            const dmCdnMatches = content.match(dmCdnRegex);
+            if (dmCdnMatches) {
+                dmCdnMatches.forEach(m => videoUrls.push(m));
             }
         }
     });
