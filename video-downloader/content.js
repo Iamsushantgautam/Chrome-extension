@@ -38,6 +38,22 @@ function findVideos() {
             const clearUrl = pinMatch[2].replace(/\\u002F/g, '/');
             videoUrls.push(clearUrl);
         }
+
+        // Specifically look for Dailymotion metadata patterns
+        if (window.location.hostname.includes('dailymotion.com')) {
+            const dmRegex = /"qualities":\s*({[^}]+})/g;
+            const dmMatch = dmRegex.exec(content);
+            if (dmMatch) {
+                try {
+                    const qualities = JSON.parse(dmMatch[1]);
+                    Object.values(qualities).forEach(q => {
+                        if (Array.isArray(q) && q.length > 0 && q[0].url) {
+                            videoUrls.push(q[0].url);
+                        }
+                    });
+                } catch (e) { }
+            }
+        }
     });
 
     // 3. Document-wide Brute Force (Last Resort)
