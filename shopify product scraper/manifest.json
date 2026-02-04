@@ -1,0 +1,39 @@
+{
+    "manifest_version": 3,
+    "name": "Shopify Product Scraper to CSV",
+    "version": "1.0",
+    "description": "Scrape products from any Shopify store and export to CSV compatible with Shopify import.",
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "downloads"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "icon.png",
+            "32": "icon.png",
+            "48": "icon.png",
+            "128": "icon.png"
+        }
+    },
+    "icons": {
+        "16": "icon.png",
+        "32": "icon.png",
+        "48": "icon.png",
+        "128": "icon.png"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ]
+}

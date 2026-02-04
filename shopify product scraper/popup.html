@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopify Scraper</title>
+    <link rel="stylesheet" href="popup.css">
+    <link rel="icon" type="image/png" href="icon.png">
+</head>
+
+<body>
+    <!-- Header -->
+    <div class="app-header">
+        <div class="logo-area">
+            <img src="icon.png" alt="Logo" width="48" height="48" style="border-radius: 4px;">
+            <span>Shopify Scraper by Shopscan</span>
+        </div>
+        <div class="connection-status" id="status-badge">
+            <span class="dot" id="status-dot"></span> <span id="status-text">Connected</span>
+        </div>
+    </div>
+
+    <!-- View: Connected (Dashboard) -->
+    <div class="container" id="connected-view" style="display: none;">
+        <!-- Store Info Card -->
+        <div class="card store-card">
+            <div class="store-header">
+                <div>
+                    <h2 id="store-title">Detecting Store...</h2>
+                    <div id="store-url" class="store-link">...</div>
+                </div>
+                <span class="badge verified">Verified</span>
+            </div>
+
+            <div class="info-row">
+                <div class="info-icon-box">📍</div>
+                <div class="info-text">Store Location: <span id="store-location">Unknown</span></div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-icon blue">📦</div>
+                    <div class="stat-content">
+                        <strong id="stat-product-count">-</strong>
+                        <span>Products</span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon purple">📚</div>
+                    <div class="stat-content">
+                        <strong id="stat-collection-count">-</strong>
+                        <span>Collections</span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon light-blue">📅</div>
+                    <div class="stat-content">
+                        <strong id="stat-first-date">-</strong>
+                        <span>First Product</span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon light-purple">🕒</div>
+                    <div class="stat-content">
+                        <strong id="stat-last-date">-</strong>
+                        <span>Last Product</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br />
+
+        <!-- Main Actions -->
+        <button id="btn-export-all" class="btn-large btn-purple" disabled>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Export All Products <span id="btn-count-badge" class="btn-badge">0</span>
+        </button>
+        <br />
+
+        <!-- Selected Actions -->
+        <div id="selected-actions" class="selected-actions-bar" style="display: none;">
+            <span>Selected: <b id="selected-count">0</b></span>
+            <button id="btn-export-selected" class="btn-small btn-green">Download Selected</button>
+        </div>
+        <br />
+
+        <!-- Collection Export -->
+        <div class="card collection-card">
+            <div class="card-title">
+                <span class="icon-user-plus">👤</span> Export by Collection
+            </div>
+            <select id="collection-select" class="select-input">
+                <option value="">Select a collection...</option>
+            </select>
+            <button id="btn-export-collection" class="btn-block btn-pink" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                </svg>
+                Export Selected Collection
+            </button>
+        </div>
+        <br />
+
+        <!-- Product List -->
+        <div id="product-list" class="product-grid">
+            <!-- Products injected here -->
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Waiting for data...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- View: Not Shopify -->
+    <div id="not-shopify-view" style="display: none;">
+        <div class="warning-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <p>This doesn't appear to be a Shopify store. Please navigate to a Shopify store to use this extension.</p>
+        </div>
+
+        <div class="promo-card">
+            <h2>Created by Sushant Gautam, dedicated to building smart, reliable developer tools.</h2>
+            <a href="https://www.sushant.online" target="_blank" class="btn-promo">Visit Creator portfolio</a>
+        </div>
+
+        <div class="affiliate-disclosure">
+            📌 I built this tool to solve real problems faced by creators and entrepreneurs. My goal is simple: deliver
+            powerful features in a clean, easy to use experience so anyone can work smarter, not harder.
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>
