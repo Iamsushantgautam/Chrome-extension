@@ -106,10 +106,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Lightbox Listeners
-    if (document.querySelector(".lb-close")) {
-        document.querySelector(".lb-close").onclick = closeLightbox;
-        document.querySelector(".lb-prev").onclick = () => navLightbox(-1);
-        document.querySelector(".lb-next").onclick = () => navLightbox(1);
+    // Lightbox Listeners
+    const lbCloseBtn = document.querySelector(".lb-close");
+    const lbPrevBtn = document.querySelector(".lb-prev");
+    const lbNextBtn = document.querySelector(".lb-next");
+
+    if (lbCloseBtn) lbCloseBtn.onclick = closeLightbox;
+    if (lbPrevBtn) lbPrevBtn.onclick = () => navLightbox(-1);
+    if (lbNextBtn) lbNextBtn.onclick = () => navLightbox(1);
+
+    if (lbCloseBtn) { // Wrapper for keydown
         document.addEventListener("keydown", (e) => {
             if (lightbox && !lightbox.classList.contains("hidden")) {
                 if (e.key === "Escape") closeLightbox();

@@ -1,192 +1,99 @@
-# ✅ Reset, Close Buttons & File Size Display
+# 🖼️ Media Downloader & BG Remover
 
-## New Features Added:
+A powerful Chrome extension to **download images & videos** from any website and **remove image backgrounds** instantly.
 
-### 1. **Reset Button** 🔄
-Clears all selected items instantly.
+---
 
-**Location:** Top-right header  
-**Icon:** Circular arrows  
-**Function:** Deselects all images/videos  
+## ✨ Features
 
-**Usage:**
-- Select some images
-- Click reset button
-- All selections cleared
-- Selection count returns to 0
+### 1. **Media Downloader** 📥
+- **Auto-Detect**: Finds all images and videos on the current page.
+- **Smart Filtering**: Filter by type (JPG, PNG, Video) or size (Small, Medium, Large).
+- **Batch Download**: Select multiple files and download them all at once.
+- **Organized**: Downloads are saved in folders named after the website.
+- **File Sizes**: See file sizes (KB/MB) and dimensions before downloading.
+- **Tabs**: Separate views for **Images** and **Videos**.
 
-### 2. **Close Button** ✖️
-Closes the extension popup.
+### 2. **Background Remover** 🎨
+- **AI-Powered**: Uses remove.bg technology for professional results.
+- **Easy Upload**: Drag & drop or browse to upload.
+- **Full HD**: Downloads high-quality transparent PNGs.
+- **Preview**: See side-by-side comparison before downloading.
+- **Smart Quota**: Automatically uses free preview mode if you run out of credits.
 
-**Location:** Top-right header (next to reset)  
-**Icon:** X mark  
-**Function:** Closes popup window  
+---
 
-**Usage:**
-- Click to close popup
-- Equivalent to clicking outside popup
+## 🚀 How to Install & Use Locally
 
-### 3. **File Size Display** 📊
-Shows actual file size for each image/video.
+Since this is a developer extension, you need to load it into Chrome manually.
 
-**Location:** Badge on each card  
-**Display:** KB or MB format  
-**Color:** Green badge
+### **Step 1: Download/Locate Code**
+Ensure you have the source code folder on your computer.
+*(You are currently in: `d:\My Project\Chrome extension\web image and video downloader`)*
 
-## Visual Layout:
+### **Step 2: Open Chrome Extensions Page**
+1. Open Google Chrome.
+2. In the address bar, type: `chrome://extensions/`
+3. Press **Enter**.
 
-### Header:
-```
-┌────────────────────────────────────────┐
-│ 🖼️ Image Download          🔄  ✖️    │
-│                          Reset Close   │
-└────────────────────────────────────────┘
-```
+### **Step 3: Enable Developer Mode**
+1. Look at the **top right** corner of the page.
+2. Toggle the switch **"Developer mode"** to **ON** (blue).
 
-### Card with Size Badge:
-```
-┌──────────────┐
-│              │
-│    IMAGE     │
-│              │
-│  JPG 800x600 │  ← Extension + Dimensions
-│  125.4 KB    │  ← File Size (green badge)
-│ https://...  │
-└──────────────┘
-```
+### **Step 4: Load the Extension**
+1. Click the button **"Load unpacked"** (top left).
+2. A file picker will open.
+3. Select the **folder** containing this project:
+   `web image and video downloader`
+4. Click **Select Folder**.
 
-## File Size Details:
+🎉 **The extension is now installed!** You should see its icon in your browser toolbar.
 
-### Format Examples:
-- **< 1 KB**: "842 B"
-- **1 KB - 999 KB**: "125.4 KB"
-- **1 MB+**: "2.3 MB"
+---
 
-### How It Works:
-1. Card renders with "..." placeholder
-2. Async HEAD request fetches Content-Length
-3. Badge updates with formatted size
-4. If fetch fails, badge hides automatically
+## 🛠️ Configuration (API Key)
 
-### Fallback Strategy:
-```
-1. Try HEAD request → Get Content-Length
-   ↓ (if fails)
-2. Try range GET request → Parse Content-Range
-   ↓ (if fails)
-3. Hide size badge (no error shown)
-```
+To use the **Background Remover**, you need a free API key:
 
-## Button Styling:
+1. Go to [remove.bg/api](https://remove.bg/api) and sign up.
+2. Get your **API Key**.
+3. Open the file `popup.js` in a text editor (VS Code, Notepad, etc.).
+4. Find line **~730** (search for `apiKey`).
+5. Replace:
+   ```javascript
+   const apiKey = 'YOUR_KEY_HERE';
+   ```
+   with your actual key.
+6. **Reload** the extension (click 🔄 icon on the extension card in `chrome://extensions/`).
 
-### Reset & Close Buttons:
-- **Size**: 36×36px
-- **Style**: Transparent background
-- **Hover**: Light gray background
-- **Active**: Scale down slightly (0.95)
+---
 
-### Reset Button Function:
-```javascript
-onClick → 
-  Clear selectedIndices →
-  Re-render cards →
-  Update stats →
-  Button shows "Download 0 files"
-```
+## 📖 How to Use
 
-### Close Button Function:
-```javascript
-onClick → window.close()
-```
+### **Downloading Media:**
+1. Go to any website (e.g., Unsplash, Pinterest, YouTube).
+2. Click the **extension icon**.
+3. Browse the **IMages** or **Videos** tabs.
+4. Select the items you want.
+5. Click **"Download Selected"**.
 
-## Size Badge Colors:
+### **Removing Backgrounds:**
+1. Click the extension icon.
+2. Go to the **"BG Remover"** tab.
+3. Drag & drop an image or click to upload.
+4. Wait for AI processing.
+5. Click **"Download HD Image"**.
 
-| Badge Type | Color | Background |
-|------------|-------|------------|
-| Extension (JPG, PNG) | White | Dark gray (75% opacity) |
-| Dimensions (800x600) | White | Dark gray (75% opacity) |
-| **File Size (KB/MB)** | **White** | **Green (#10b981)** |
+---
 
-## Technical Implementation:
+## 📁 Project Structure
 
-### File Size Fetching:
-```javascript
-async function fetchFileSize(url) {
-    // 1. Try HEAD request
-    const response = await fetch(url, { method: 'HEAD' });
-    const size = response.headers.get('Content-Length');
-    
-    // 2. If fails, try range GET
-    // 3. Return null if both fail
-}
-```
+- `manifest.json` - Configuration & Permissions
+- `popup.html` - Can be opened to view UI structure
+- `popup.js` - Main logic (API calls, downloading, UI)
+- `popup.css` - Styling (Grid, Colors, Layout)
+- `content.js` - Script that scans web pages for media
 
-### File Size Formatting:
-```javascript
-function formatFileSize(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
-```
+---
 
-### Badge Creation:
-```javascript
-const sizeBadge = document.createElement("span");
-sizeBadge.className = "badge badge-size";
-sizeBadge.textContent = "...";
-
-fetchFileSize(url).then(size => {
-    sizeBadge.textContent = formatFileSize(size);
-}).catch(() => {
-    sizeBadge.style.display = 'none';
-});
-```
-
-## Example Scenarios:
-
-### Scenario 1: Reset After Selection
-```
-1. Selected: 15 images
-2. Click reset button 🔄
-3. All cards deselected
-4. "Download 0 files" (button disabled)
-```
-
-### Scenario 2: Close Popup
-```
-1. Open extension popup
-2. Browse images
-3. Click close ✖️
-4. Popup closes
-```
-
-### Scenario 3: View File Sizes
-```
-Card displays:
-┌─────────────┐
-│   IMAGE     │
-│ PNG 1920x1080 │ ← Dark gray badges
-│ 1.2 MB      │ ← Green badge
-└─────────────┘
-
-Small image:
-│ JPG 400x300 │
-│ 45.7 KB     │
-
-Large image:
-│ WEBP 4000x3000 │
-│ 3.8 MB         │
-```
-
-## Benefits:
-
-✅ **Reset Button**: Quick way to clear all selections  
-✅ **Close Button**: Easy popup dismissal  
-✅ **File Size**: Know before downloading  
-✅ **Smart Formatting**: Auto KB/MB conversion  
-✅ **Async Loading**: Doesn't slow down card rendering  
-✅ **Graceful Failure**: Hides badge if size unavailable  
-✅ **Visual Hierarchy**: Green badge stands out
-
-**Now you can see file sizes before downloading!** 📊
+**Enjoy your new Media Tool!** 🚀
