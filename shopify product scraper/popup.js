@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // UI Elements
     const storeTitle = document.getElementById('store-title');
     const storeUrl = document.getElementById('store-url');
-    // const storeLocation = document.getElementById('store-location'); // Not used dynamically yet
 
     // Stats
     const statProductCount = document.getElementById('stat-product-count');
@@ -29,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let collections = [];
     let selectedHandles = new Set();
     let currentStoreHost = '';
+    let currentCurrency = 'USD';
 
     // 1. Initialize & Inject Content Script
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -67,6 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         storeTitle.textContent = "Shopify Store Detected";
         storeUrl.textContent = response.host;
         currentStoreHost = response.host;
+        currentCurrency = response.currency || 'USD';
 
         // Show Connected View
         if (connectedView) connectedView.style.display = 'block';
@@ -87,7 +88,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             statCollectionCount.textContent = collections.length;
 
             // Populate Dropdown
-            // Preserve selection if rebuilding
             const currentVal = collectionSelect.value;
             collectionSelect.innerHTML = '<option value="">All Products (Default)</option>';
             collections.forEach(c => {
@@ -102,10 +102,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (msg.action === "COMPLETE") {
             allProducts = msg.products;
 
-            // Initial View: Show All
             if (!collectionSelect.value) {
                 renderProducts(allProducts);
-                updateStats(allProducts); // Global Stats
+                updateStats(allProducts);
                 btnExportAll.disabled = false;
                 btnCountBadge.textContent = allProducts.length;
             }
@@ -115,11 +114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (msg.action === "COLLECTION_COMPLETE") {
             const collProducts = msg.products;
             renderProducts(collProducts);
-            // We don't update Global Stats (First/Last date of store), 
-            // but maybe we update the grid title or count?
-            // For now just rendering them is what user asked: "show the all products"
 
-            // Enable collection export with correct data
             btnExportCollection.onclick = () => {
                 generateCSV(collProducts, `${currentStoreHost}_collection_${msg.handle}`);
             };
@@ -134,17 +129,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         statProductCount.textContent = products.length;
 
-        // Date Logic (Sort by created_at)
         const sorted = [...products].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
         const first = new Date(sorted[0].created_at);
         const last = new Date(sorted[sorted.length - 1].created_at);
 
         statFirstDate.textContent = first.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
         statLastDate.textContent = last.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-
-        // Try to guess location (not reliable in basic scrape, placeholder)
-        // storeLocation.textContent = "Detected"; 
     }
 
     function renderProducts(products) {
@@ -158,6 +148,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const price = p.variants && p.variants[0] ? p.variants[0].price : '0.00';
             const date = new Date(p.created_at).toLocaleDateString();
 
+            const totalInventory = p.variants.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0);
+            const inventoryText = totalInventory > 0 ? `${totalInventory} in stock` : 'Out of Stock';
+            const inventoryClass = totalInventory > 0 ? 'in-stock' : 'out-of-stock';
+
             card.innerHTML = `
                 <div class="product-img-box">
                     <div class="seq-badge">${index + 1}</div>
@@ -167,7 +161,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="p-details">
                     <div class="p-title" title="${p.title}">${p.title}</div>
                     <div class="p-meta">Created: ${date}</div>
-                    <div class="p-price">${price}</div>
+                    <div class="p-inventory ${inventoryClass}">${inventoryText}</div>
+                    <div class="p-price">${currentCurrency} ${price}</div>
                     
                     <div class="card-actions">
                         <button class="btn-small btn-blue btn-details" data-handle="${p.handle}">See details</button>
@@ -179,7 +174,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             productList.appendChild(card);
         });
 
-        // Add Event Listeners for dynamic items
         document.querySelectorAll('.select-checkbox').forEach(cb => {
             cb.addEventListener('change', (e) => {
                 const handle = e.target.dataset.handle;
@@ -193,7 +187,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             btn.addEventListener('click', (e) => {
                 const handle = e.target.dataset.handle;
                 const p = allProducts.find(x => x.handle === handle);
-                if (p) generateCSV([p], `${currentStoreHost}_${p.handle}`);
+                if (p) {
+                    const safeTitle = p.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    generateCSV([p], safeTitle);
+                }
             });
         });
 
@@ -228,16 +225,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     collectionSelect.addEventListener('change', () => {
         const handle = collectionSelect.value;
-
         if (!handle) {
-            // Revert to All
             renderProducts(allProducts);
             btnExportCollection.disabled = true;
             btnExportCollection.textContent = "Export Selected Collection";
             return;
         }
 
-        // Show Loading
         productList.innerHTML = `
             <div class="loading-state">
                 <div class="spinner"></div>
@@ -245,69 +239,84 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
         `;
 
-        // Disable export until fetched
         btnExportCollection.disabled = true;
-
-        // Fetch Collection
         chrome.tabs.sendMessage(tab.id, {
             action: "FETCH_COLLECTION",
             handle: handle
         });
     });
 
-    // CSV Generator (Reused & Optimized)
+    // CSV Generator (Full Shopify Format)
     function generateCSV(products, filename) {
         const headers = [
-            'Handle', 'Title', 'Body (HTML)', 'Vendor', 'Type', 'Tags', 'Published',
-            'Option1 Name', 'Option1 Value', 'Option2 Name', 'Option2 Value', 'Option3 Name', 'Option3 Value',
-            'Variant SKU', 'Variant Grams', 'Variant Inventory Qty', 'Variant Price', 'Variant Compare At Price',
-            'Image Src', 'Image Position', 'Image Alt Text'
+            'Title', 'URL handle', 'Description', 'Vendor', 'Product category', 'Type', 'Tags', 'Published on online store',
+            'Status', 'SKU', 'Barcode', 'Option1 name', 'Option1 value', 'Option1 Linked To', 'Option2 name', 'Option2 value',
+            'Option2 Linked To', 'Option3 name', 'Option3 value', 'Option3 Linked To', 'Price', 'Compare-at price', 'Cost per item',
+            'Charge tax', 'Tax code', 'Unit price total measure', 'Unit price total measure unit', 'Unit price base measure',
+            'Unit price base measure unit', 'Inventory tracker', 'Inventory quantity', 'Continue selling when out of stock',
+            'Weight value (grams)', 'Weight unit for display', 'Requires shipping', 'Fulfillment service', 'Product image URL',
+            'Image position', 'Image alt text', 'Variant image URL', 'Gift card', 'SEO title', 'SEO description',
+            'Color (product.metafields.shopify.color-pattern)', 'Google Shopping / Google product category',
+            'Google Shopping / Gender', 'Google Shopping / Age group', 'Google Shopping / Manufacturer part number (MPN)',
+            'Google Shopping / Ad group name', 'Google Shopping / Ads labels', 'Google Shopping / Condition',
+            'Google Shopping / Custom product', 'Google Shopping / Custom label 0', 'Google Shopping / Custom label 1',
+            'Google Shopping / Custom label 2', 'Google Shopping / Custom label 3', 'Google Shopping / Custom label 4'
         ];
 
         let rows = [];
-
         products.forEach(p => {
-            // simplified logic for robustness
             const variants = p.variants || [];
             const images = p.images || [];
             const max = Math.max(variants.length, images.length) || 1;
 
             for (let i = 0; i < max; i++) {
-                let row = new Array(headers.length).fill('');
-
-                row[0] = p.handle;
+                let rowData = {};
+                headers.forEach(h => rowData[h] = '');
+                const v = variants[i] || {};
+                const img = images[i] || {};
 
                 if (i === 0) {
-                    row[1] = escapeCSV(p.title);
-                    row[2] = escapeCSV(p.body_html);
-                    row[3] = escapeCSV(p.vendor);
-                    row[4] = escapeCSV(p.product_type);
-                    row[5] = escapeCSV(p.tags);
-                    row[6] = 'TRUE';
-
-                    if (p.options[0]) row[7] = escapeCSV(p.options[0].name);
-                    if (p.options[1]) row[9] = escapeCSV(p.options[1].name);
-                    if (p.options[2]) row[11] = escapeCSV(p.options[2].name);
+                    rowData['Title'] = escapeCSV(p.title);
+                    rowData['Description'] = escapeCSV(p.body_html);
+                    rowData['Vendor'] = escapeCSV(p.vendor);
+                    rowData['Type'] = escapeCSV(p.product_type);
+                    rowData['Tags'] = escapeCSV(p.tags);
+                    rowData['Published on online store'] = 'TRUE';
+                    rowData['Status'] = 'active';
+                    rowData['Gift card'] = 'FALSE';
+                    if (p.options && p.options[0]) rowData['Option1 name'] = escapeCSV(p.options[0].name);
+                    if (p.options && p.options[1]) rowData['Option2 name'] = escapeCSV(p.options[1].name);
+                    if (p.options && p.options[2]) rowData['Option3 name'] = escapeCSV(p.options[2].name);
                 }
 
+                rowData['URL handle'] = p.handle;
+
                 if (i < variants.length) {
-                    const v = variants[i];
-                    row[8] = escapeCSV(v.option1);
-                    row[10] = escapeCSV(v.option2);
-                    row[12] = escapeCSV(v.option3);
-                    row[13] = escapeCSV(v.sku);
-                    row[14] = v.grams;
-                    row[15] = v.inventory_quantity;
-                    row[16] = v.price;
-                    row[17] = v.compare_at_price;
+                    rowData['Option1 value'] = escapeCSV(v.option1);
+                    rowData['Option2 value'] = escapeCSV(v.option2);
+                    rowData['Option3 value'] = escapeCSV(v.option3);
+                    rowData['SKU'] = escapeCSV(v.sku);
+                    rowData['Barcode'] = escapeCSV(v.barcode);
+                    rowData['Price'] = v.price;
+                    rowData['Compare-at price'] = v.compare_at_price;
+                    rowData['Charge tax'] = v.taxable ? 'TRUE' : 'FALSE';
+                    rowData['Inventory tracker'] = v.inventory_management || 'shopify';
+                    rowData['Inventory quantity'] = v.inventory_quantity || 0;
+                    rowData['Continue selling when out of stock'] = v.inventory_policy === 'continue' ? 'continue' : 'deny';
+                    rowData['Weight value (grams)'] = v.grams;
+                    rowData['Weight unit for display'] = 'g';
+                    rowData['Requires shipping'] = v.requires_shipping ? 'TRUE' : 'FALSE';
+                    rowData['Fulfillment service'] = v.fulfillment_service || 'manual';
+                    if (v.featured_image) rowData['Variant image URL'] = escapeCSV(v.featured_image.src);
                 }
 
                 if (i < images.length) {
-                    row[18] = escapeCSV(images[i].src);
-                    row[19] = i + 1;
-                    row[20] = escapeCSV(images[i].alt);
+                    rowData['Product image URL'] = escapeCSV(img.src);
+                    rowData['Image position'] = img.position || (i + 1);
+                    rowData['Image alt text'] = escapeCSV(img.alt);
                 }
 
+                const row = headers.map(h => rowData[h]);
                 rows.push(row.join(','));
             }
         });
@@ -315,11 +324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const csvContent = headers.join(',') + '\n' + rows.join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
-
-        chrome.downloads.download({
-            url: url,
-            filename: `${filename}.csv`
-        });
+        chrome.downloads.download({ url: url, filename: `${filename}.csv` });
     }
 
     function escapeCSV(str) {

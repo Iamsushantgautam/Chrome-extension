@@ -5,7 +5,21 @@ function isShopify() {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "CHECK_SHOPIFY") {
-        sendResponse({ isShopify: isShopify(), host: window.location.hostname });
+        let currency = "USD"; // Fallback
+
+        // Try to find currency
+        const metaCurrency = document.querySelector('meta[property="og:price:currency"]');
+        if (metaCurrency) {
+            currency = metaCurrency.getAttribute('content');
+        } else if (window.Shopify && window.Shopify.currency && window.Shopify.currency.active) {
+            currency = window.Shopify.currency.active;
+        }
+
+        sendResponse({
+            isShopify: isShopify(),
+            host: window.location.hostname,
+            currency: currency
+        });
     }
 
     if (request.action === "START_SCRAPE") {
