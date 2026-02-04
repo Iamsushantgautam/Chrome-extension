@@ -65,8 +65,28 @@ document.addEventListener('DOMContentLoaded', () => {
             tab.classList.add('active');
             // Update active tab
             activeTab = tab.dataset.tab;
-            // Re-apply filters
-            applyFilters();
+
+            // Toggle sections
+            const mediaContainer = document.getElementById('media-container');
+            const bgRemoverSection = document.getElementById('bg-remover-section');
+            const subHeader = document.querySelector('.sub-header');
+            const bottomBar = document.querySelector('.bottom-bar');
+
+            if (activeTab === 'bg-remover') {
+                // Show BG Remover, hide media grid
+                if (mediaContainer) mediaContainer.style.display = 'none';
+                if (bgRemoverSection) bgRemoverSection.style.display = 'flex';
+                if (subHeader) subHeader.style.display = 'none';
+                if (bottomBar) bottomBar.style.display = 'none';
+            } else {
+                // Show media grid, hide BG Remover
+                if (mediaContainer) mediaContainer.style.display = 'grid';
+                if (bgRemoverSection) bgRemoverSection.style.display = 'none';
+                if (subHeader) subHeader.style.display = 'flex';
+                if (bottomBar) bottomBar.style.display = 'flex';
+                // Re-apply filters for images/videos
+                applyFilters();
+            }
         });
     });
 
@@ -621,4 +641,184 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ================== BACKGROUND REMOVER ==================
+    const bgFileInput = document.getElementById('bg-file-input');
+    const uploadArea = document.getElementById('upload-area');
+    const previewArea = document.getElementById('preview-area');
+    const originalImg = document.getElementById('original-img');
+    const resultImg = document.getElementById('result-img');
+    const processingSpinner = document.getElementById('processing-spinner');
+    const btnBgDownload = document.getElementById('btn-bg-download');
+    const btnBgReset = document.getElementById('btn-bg-reset');
+    const btnUpload = document.querySelector('.btn-upload');
+
+    let processedImageBlob = null;
+
+    // Upload button click
+    if (btnUpload) {
+        btnUpload.addEventListener('click', () => {
+            bgFileInput.click();
+        });
+    }
+
+    // Upload area click
+    if (uploadArea) {
+        uploadArea.addEventListener('click', () => {
+            bgFileInput.click();
+        });
+    }
+
+    // Drag and drop
+    if (uploadArea) {
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = 'var(--primary)';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#d1d5db';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#d1d5db';
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleImageUpload(file);
+            }
+        });
+    }
+
+    // File input change
+    if (bgFileInput) {
+        bgFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleImageUpload(file);
+            }
+        });
+    }
+
+    function handleImageUpload(file) {
+        // Show preview area
+        uploadArea.style.display = 'none';
+        previewArea.style.display = 'flex';
+
+        // Show original image
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            originalImg.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+
+        // Process image
+        removeBackground(file);
+    }
+
+    async function removeBackground(file) {
+        try {
+            // Show spinner
+            processingSpinner.style.display = 'flex';
+            resultImg.style.display = 'none';
+            btnBgDownload.disabled = true;
+
+            // Use remove.bg API - requires API key
+            // For demo purposes, I'll use a client-side solution
+            // In production, you should use remove.bg API with your key
+
+            const formData = new FormData();
+            formData.append('image_file', file);
+            // 'auto' uses highest available resolution (Full HD if credit exists, Preview if standard free tier)
+            formData.append('size', 'auto');
+
+            // API Key
+            const apiKey = 'jVvZvSY4V3FkyxKsgymNPtxf';
+
+            const response = await fetch('https://api.remove.bg/v1.0/removebg', {
+                method: 'POST',
+                headers: {
+                    'X-Api-Key': apiKey
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                const errDetail = errData.errors ? errData.errors[0].title : response.statusText;
+                console.error("API Error:", errData);
+                throw new Error(`API Error: ${errDetail} (${response.status})`);
+            }
+
+            const blob = await response.blob();
+            processedImageBlob = blob;
+
+            // Show result
+            const url = URL.createObjectURL(blob);
+            resultImg.src = url;
+            resultImg.style.display = 'block';
+            processingSpinner.style.display = 'none';
+            btnBgDownload.disabled = false;
+
+        } catch (error) {
+            console.error('Error removing background:', error);
+
+            let helpfulMsg = "Please check your API key in popup.js";
+            if (error.message.includes("402")) {
+                helpfulMsg = "⚠️ <b>Quota Exceeded!</b><br>You have used all 50 free credits.<br>Please get a new API key from remove.bg";
+            }
+
+            processingSpinner.innerHTML = `
+                <div style="color: var(--primary); text-align: center; padding: 10px;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <p style="margin: 8px 0 0 0; font-size: 13px; font-weight: 600;">Failed to remove background</p>
+                    <p style="margin: 4px 0 8px 0; font-size: 11px; color: #ef4444;">${error.message}</p>
+                    <p style="margin: 0; font-size: 11px; color: var(--text-muted); line-height: 1.4;">${helpfulMsg}</p>
+                    <button id="btn-retry-upload" class="btn-outline" style="margin-top: 12px; font-size: 11px; padding: 4px 8px;">Try Another Key</button>
+                </div>
+            `;
+
+            // Re-attach upload reset listener to the new button
+            const btnRetry = document.getElementById('btn-retry-upload');
+            if (btnRetry) {
+                btnRetry.onclick = () => btnBgReset.click();
+            }
+        }
+    }
+
+    // Download button
+    if (btnBgDownload) {
+        btnBgDownload.addEventListener('click', () => {
+            if (processedImageBlob) {
+                const url = URL.createObjectURL(processedImageBlob);
+                chrome.downloads.download({
+                    url: url,
+                    filename: `bg-removed-${Date.now()}.png`,
+                    saveAs: true
+                });
+            }
+        });
+    }
+
+    // Reset button
+    if (btnBgReset) {
+        btnBgReset.addEventListener('click', () => {
+            uploadArea.style.display = 'block';
+            previewArea.style.display = 'none';
+            bgFileInput.value = '';
+            originalImg.src = '';
+            resultImg.src = '';
+            processedImageBlob = null;
+            processingSpinner.style.display = 'none';
+            processingSpinner.innerHTML = `
+                <div class="spinner-circle"></div>
+                <p>Removing background...</p>
+            `;
+        });
+    }
+
 }); // End DOMContentLoaded
+
