@@ -104,20 +104,22 @@ function injectDownloadButtons() {
         // Style the button
         Object.assign(btn.style, {
             position: 'absolute',
-            top: '20px',
-            right: '20px',
-            width: '36px',
-            height: '36px',
-            backgroundColor: 'rgba(255, 51, 102, 0.9)',
+            top: '30px',
+            right: '70px',
+            width: '40px',
+            height: '40px',
+            background: 'linear-gradient(135deg, #ff3366, #ff0044)',
             borderRadius: '50%',
             cursor: 'pointer',
             zIndex: '2147483647',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            transition: 'transform 0.2s, opacity 0.2s',
-            pointerEvents: 'auto'
+            boxShadow: '0 4px 15px rgba(255, 51, 102, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.2)',
+            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            pointerEvents: 'auto',
+            border: 'none',
+            backdropFilter: 'blur(4px)'
         });
 
         btn.className = 'v-download-btn';
@@ -133,8 +135,14 @@ function injectDownloadButtons() {
             parent.appendChild(btn);
         }
 
-        btn.addEventListener('mouseenter', () => btn.style.transform = 'scale(1.1)');
-        btn.addEventListener('mouseleave', () => btn.style.transform = 'scale(1)');
+        btn.addEventListener('mouseenter', () => {
+            btn.style.transform = 'scale(1.2) rotate(5deg)';
+            btn.style.boxShadow = '0 6px 20px rgba(255, 51, 102, 0.7)';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.transform = 'scale(1) rotate(0deg)';
+            btn.style.boxShadow = '0 4px 15px rgba(255, 51, 102, 0.5)';
+        });
 
         btn.addEventListener('click', (e) => {
             e.preventDefault();
