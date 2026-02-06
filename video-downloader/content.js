@@ -95,14 +95,23 @@ function findVideos() {
     if (broadMatches) videoUrls.push(...broadMatches);
 
     // Clean up, filter, and prioritize MP4 over HLS
-    const unique = [...new Set(videoUrls)].filter(url => {
+    let unique = [...new Set(videoUrls)].filter(url => {
         return typeof url === 'string' &&
             url.startsWith('http') &&
             !url.includes('blob:') &&
+            !url.toLowerCase().includes('.m3u8') &&
+            !url.toLowerCase().includes('.html') &&
+            !url.toLowerCase().includes('.htm') &&
             (url.includes('.mp4') || url.includes('video') || url.includes('/v1/'));
     });
 
-    // Sort to put .mp4 files first (better for downloads)
+    // If any .mp4 videos are found, ONLY return those
+    const mp4Videos = unique.filter(url => url.toLowerCase().includes('.mp4'));
+    if (mp4Videos.length > 0) {
+        unique = mp4Videos;
+    }
+
+    // Sort to put .mp4 files first (if we have multiple mp4s)
     return unique.sort((a, b) => {
         if (a.includes('.mp4') && !b.includes('.mp4')) return -1;
         if (!a.includes('.mp4') && b.includes('.mp4')) return 1;
@@ -119,6 +128,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Floating Button Logic
 function injectDownloadButtons() {
+    const detectedVideos = findVideos();
+    // Only show if we actually found a downloadable MP4/Video file
+    const hasDownloadableVideo = detectedVideos.some(url =>
+        url.toLowerCase().includes('.mp4') ||
+        url.includes('pinimg.com/videos') ||
+        url.includes('dmcdn.net')
+    );
+
+    if (!hasDownloadableVideo) return;
+
     const videos = document.querySelectorAll('video');
     videos.forEach(video => {
         if (video.dataset.downloaderAttached) return;
@@ -127,19 +146,19 @@ function injectDownloadButtons() {
         // Create button container
         const btn = document.createElement('div');
         btn.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="white" stroke-width="2"/>
-                <path d="M12 8V16M12 16L15 13M12 16L9 13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;">
+                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="white" stroke-width="2.5"/>
+                <path d="M12 8V16M12 16L15 13M12 16L9 13" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         `;
 
-        // Style the button
+        // Style the button - Small Circular Icon
         Object.assign(btn.style, {
             position: 'absolute',
-            top: '30px',
-            right: '70px',
-            width: '40px',
-            height: '40px',
+            top: '12px',
+            right: '12px',
+            width: '32px',
+            height: '32px',
             background: 'linear-gradient(135deg, #ff3366, #ff0044)',
             borderRadius: '50%',
             cursor: 'pointer',
@@ -147,15 +166,16 @@ function injectDownloadButtons() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 15px rgba(255, 51, 102, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.2)',
-            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            boxShadow: '0 4px 12px rgba(255, 51, 102, 0.4)',
+            transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
             pointerEvents: 'auto',
-            border: 'none',
-            backdropFilter: 'blur(4px)'
+            border: '1.5px solid rgba(255, 255, 255, 0.3)',
+            backdropFilter: 'blur(8px)',
+            userSelect: 'none'
         });
 
         btn.className = 'v-download-btn';
-        btn.title = 'Download Video';
+        btn.title = 'Download MP4';
 
         // Ensure parent is relative for absolute positioning
         const parent = video.parentElement;
@@ -168,41 +188,27 @@ function injectDownloadButtons() {
         }
 
         btn.addEventListener('mouseenter', () => {
-            btn.style.transform = 'scale(1.2) rotate(5deg)';
-            btn.style.boxShadow = '0 6px 20px rgba(255, 51, 102, 0.7)';
+            btn.style.transform = 'scale(1.15)';
+            btn.style.boxShadow = '0 6px 15px rgba(255, 51, 102, 0.6)';
         });
         btn.addEventListener('mouseleave', () => {
-            btn.style.transform = 'scale(1) rotate(0deg)';
-            btn.style.boxShadow = '0 4px 15px rgba(255, 51, 102, 0.5)';
+            btn.style.transform = 'scale(1)';
+            btn.style.boxShadow = '0 4px 12px rgba(255, 51, 102, 0.4)';
         });
 
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
 
-            // 1. Try direct source
-            let src = video.src;
-            if (!src && video.querySelector('source')) {
-                src = video.querySelector('source').src;
-            }
-
-            // 2. If src is missing or a blob, try finding alternative URLs from metadata
-            if (!src || src.startsWith('blob:')) {
-                const detectedVideos = findVideos();
-                if (detectedVideos.length > 0) {
-                    // Use the first detected video URL as the most likely match
-                    src = detectedVideos[0];
-                }
-            }
-
-            if (src && src.startsWith('http') && !src.startsWith('blob:')) {
+            const currentVideos = findVideos();
+            if (currentVideos.length > 0) {
                 chrome.runtime.sendMessage({
                     action: "downloadVideo",
-                    url: src,
+                    url: currentVideos[0],
                     filename: "video_download_" + Date.now() + ".mp4"
                 });
             } else {
-                alert("Could not extract a direct video link. The video might be protected or using a specialized streaming format.");
+                alert("Could not extract a direct video link.");
             }
         });
     });

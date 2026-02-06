@@ -63,6 +63,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         for (const label of order) {
                             if (q[label] && q[label].length > 0) {
                                 const qUrl = q[label][0].url;
+                                if (qUrl.toLowerCase().includes('.m3u8') || qUrl.toLowerCase().includes('.html') || qUrl.toLowerCase().includes('.htm')) continue;
+
                                 const qLabel = label === 'auto' ? 'High' : label + 'p';
                                 foundVideos.push({ url: qUrl, quality: qLabel });
                             }
@@ -183,8 +185,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        if ((url.includes('pinterest.com/pin/') || url.includes('pin.it/') || url.includes('dailymotion.com')) && (!url.includes('.mp4') && !url.includes('.m3u8') && !url.includes('video'))) {
+        if ((url.includes('pinterest.com/pin/') || url.includes('pin.it/') || url.includes('dailymotion.com')) && (!url.includes('.mp4') && !url.includes('video'))) {
             alert("Could not extract video link. Try opening the page in your browser first.");
+            return;
+        }
+
+        if (url.toLowerCase().includes('.m3u8') || url.toLowerCase().includes('.html') || url.toLowerCase().includes('.htm')) {
+            alert("This format/file is not supported for download.");
             return;
         }
 
@@ -248,11 +255,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Filter out "dual" videos (any video smaller than 50KB is likely a thumbnail/preview)
         // Keep m3u8 files even if they are small because they are playlists
-        const filteredVideos = videoData.filter(v =>
-            v.bytes > 50000 ||
-            v.url.includes('.m3u8') ||
-            v.url.includes('dailymotion.com')
+        let filteredVideos = videoData.filter(v =>
+            (v.bytes > 50000 || v.url.includes('dailymotion.com')) &&
+            !v.url.toLowerCase().includes('.m3u8') &&
+            !v.url.toLowerCase().includes('.html') &&
+            !v.url.toLowerCase().includes('.htm')
         );
+
+        // Only show mp4 if found
+        const mp4Videos = filteredVideos.filter(v => v.url.toLowerCase().includes('.mp4'));
+        if (mp4Videos.length > 0) {
+            filteredVideos = mp4Videos;
+        }
 
         if (filteredVideos.length === 0 && videos.length > 0) {
             // If everything was filtered out, just show the largest one
@@ -269,8 +283,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             item.className = 'video-item';
             const fileName = `video_${index + 1}.mp4`;
 
-            const isStream = data.url.includes('.m3u8');
-
             // Infer quality from URL
             let quality = 'Standard';
             const url = data.url.toLowerCase();
@@ -282,7 +294,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             else if (url.includes('480')) quality = '480p';
             else if (url.includes('360')) quality = '360p';
             else if (url.includes('240')) quality = '240p';
-            else if (isStream) quality = 'Adaptive';
 
             item.innerHTML = `
                 <div class="video-thumb">
@@ -292,7 +303,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                   <div class="video-name">${fileName}</div>
                   <div class="video-meta">Quality: ${quality} | Size: ${data.sizeStr}</div>
                 </div>
-                <button class="download-btn" data-url="${data.url}">${isStream ? 'Link' : 'Download'}</button>
+                <button class="download-btn" data-url="${data.url}">Download</button>
             `;
 
             videoList.appendChild(item);
