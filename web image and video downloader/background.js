@@ -1,6 +1,6 @@
 // Background service worker
 chrome.runtime.onInstalled.addListener(() => {
-    console.log("Pinterest & Web Video Downloader installed.");
+    console.log("Media Downloader installed.");
 });
 
 // Handle messages from content scripts if needed
